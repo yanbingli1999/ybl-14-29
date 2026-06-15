@@ -5,13 +5,14 @@ import StationOrderPanel from '@/components/Station/StationOrderPanel';
 import StatsPanel from '@/components/StatsPanel/StatsPanel';
 import DispatchResultModal from '@/components/DispatchResultModal/DispatchResultModal';
 import GameOverModal from '@/components/GameOverModal/GameOverModal';
+import SponsorshipModal from '@/components/SponsorshipModal/SponsorshipModal';
 import { getStationProgress } from '@/engine/contractSystem';
 import useGameStore from '@/store/useGameStore';
 import { Train, Candy } from 'lucide-react';
 
 export default function Home() {
   const { profile } = useGameStore();
-  const { current, next, progress } = getStationProgress(profile.reputation);
+  const { next, progress } = getStationProgress(profile.reputation);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-pink-50 to-purple-50">
@@ -87,6 +88,13 @@ export default function Home() {
             <li>• 完成订单获得信誉，解锁更多车站</li>
             <li>• 4连消生成炸弹糖（范围消除），5连消生成彩虹糖（消除同色）</li>
           </ul>
+          <h3 className="font-bold text-gray-700 mb-2 mt-4">🤝 品牌赞助</h3>
+          <ul className="text-sm text-gray-600 space-y-1">
+            <li>• 每局开始前可选择品牌赞助商，获得金币预付款和专属涂装</li>
+            <li>• 赞助商附带装载条件，满足条件可获得额外奖励</li>
+            <li>• 违背条件需退还预付款并损失信誉</li>
+            <li>• 可选择跳过赞助，自由游戏</li>
+          </ul>
         </div>
 
         <footer className="mt-6 text-center text-xs text-gray-400">
@@ -97,6 +105,7 @@ export default function Home() {
       <StatsPanel />
       <DispatchResultModal />
       <GameOverModal />
+      <SponsorshipModal />
     </div>
   );
 }

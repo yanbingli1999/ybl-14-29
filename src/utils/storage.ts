@@ -9,8 +9,8 @@ import {
   Candy,
   Train,
   StationOrder,
-  Position,
   DispatchResult,
+  SponsorId,
 } from '@/types';
 import { STATIONS, INITIAL_TRAIN, GAME_CONFIG } from '@/data/config';
 import { createInitialBoard } from '@/engine/matchEngine';
@@ -32,8 +32,10 @@ export interface PersistedGameState {
   moves: number;
   combo: number;
   maxCombo: number;
-  gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover';
+  gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover' | 'sponsorship';
   dispatchResult: DispatchResult | null;
+  currentSponsorId: SponsorId | null;
+  sponsorshipAccepted: boolean;
   timestamp: number;
 }
 
@@ -70,8 +72,10 @@ export function loadGameState(profile: PlayerProfile): PersistedGameState | null
     moves: GAME_CONFIG.INITIAL_MOVES,
     combo: 0,
     maxCombo: 0,
-    gamePhase: 'playing',
+    gamePhase: 'sponsorship',
     dispatchResult: null,
+    currentSponsorId: null,
+    sponsorshipAccepted: false,
     timestamp: Date.now(),
   };
 }

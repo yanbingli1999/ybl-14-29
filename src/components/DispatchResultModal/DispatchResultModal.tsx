@@ -1,14 +1,17 @@
 import useGameStore from '@/store/useGameStore';
 import { CANDY_CONFIG } from '@/data/config';
-import { Coins, Star, CheckCircle, XCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { getSponsorById } from '@/engine/sponsorshipSystem';
+import { Coins, Star, CheckCircle, XCircle, TrendingUp, Award, AlertTriangle } from 'lucide-react';
 
 export default function DispatchResultModal() {
   const { gamePhase, dispatchResult, nextOrder, closeResult, currentOrder } = useGameStore();
 
   if (gamePhase !== 'result' || !dispatchResult || !currentOrder) return null;
 
-  const { success, matchRate, reward, penalty, mismatches, correctItems, reputationChange } =
+  const { success, matchRate, reward, penalty, mismatches, correctItems, reputationChange, sponsorshipResult } =
     dispatchResult;
+
+  const sponsor = sponsorshipResult ? getSponsorById(sponsorshipResult.sponsorId) : null;
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -103,6 +106,77 @@ export default function DispatchResultModal() {
                     差{item.quantity}个
                   </span>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {sponsorshipResult && sponsor && (
+            <div className={`mb-4 p-4 rounded-xl border-2 ${
+              sponsorshipResult.conditionsMet
+                ? 'bg-green-50 border-green-200'
+                : 'bg-orange-50 border-orange-200'
+            }`}>
+              <h4 className={`text-sm font-semibold mb-2 flex items-center gap-1 ${
+                sponsorshipResult.conditionsMet ? 'text-green-700' : 'text-orange-700'
+              }`}>
+                {sponsorshipResult.conditionsMet ? (
+                  <><Award className="w-4 h-4" /> 赞助履行成功</>
+                ) : (
+                  <><AlertTriangle className="w-4 h-4" /> 赞助违约</>
+                )}
+              </h4>
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">{sponsor.logo}</span>
+                <span className="font-medium text-gray-800">{sponsor.name}</span>
+              </div>
+
+              {sponsorshipResult.fulfilledConditions.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-gray-600 mb-1">已满足条件：</p>
+                  <div className="flex flex-wrap gap-1">
+                    {sponsorshipResult.fulfilledConditions.map((cond, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        {cond.description}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {sponsorshipResult.violatedConditions.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-gray-600 mb-1">未满足条件：</p>
+                  <div className="flex flex-wrap gap-1">
+                    {sponsorshipResult.violatedConditions.map((cond, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">
+                        <XCircle className="w-3 h-3" />
+                        {cond.description}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4 mt-3 pt-3 border-t border-gray-200">
+                {sponsorshipResult.conditionsMet ? (
+                  <div className="flex items-center gap-1 text-green-600 text-sm">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>赞助奖励: +{Math.floor(sponsor.advancePayment * 0.2)} 金币</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1 text-red-600 text-sm">
+                      <Coins className="w-4 h-4" />
+                      <span>退还预付款: -{sponsorshipResult.refundAmount} 金币</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-red-600 text-sm">
+                      <Star className="w-4 h-4" />
+                      <span>信誉损失: -{sponsorshipResult.reputationLoss}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

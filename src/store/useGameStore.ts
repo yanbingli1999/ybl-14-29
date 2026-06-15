@@ -8,6 +8,8 @@ import {
   DispatchResult,
   PlayerProfile,
   AllStats,
+  SponsorId,
+  SponsorshipResult,
 } from '@/types';
 import {
   createInitialBoard,
@@ -28,6 +30,7 @@ import {
 import { loadCandiesToTrain, clearTrain } from '@/engine/loadingSystem';
 import { calculateDispatchResult } from '@/engine/dispatchSystem';
 import { generateOrder } from '@/engine/contractSystem';
+import { evaluateSponsorship, getSponsorById } from '@/engine/sponsorshipSystem';
 import {
   loadProfile,
   saveProfile,
@@ -51,11 +54,14 @@ interface GameStore {
   currentOrder: StationOrder | null;
   currentStationId: string;
   isAnimating: boolean;
-  gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover';
+  gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover' | 'sponsorship';
   dispatchResult: DispatchResult | null;
   profile: PlayerProfile;
   stats: AllStats;
   showStats: boolean;
+  currentSponsorId: SponsorId | null;
+  sponsorshipAccepted: boolean;
+  availableSponsors: SponsorId[];
 
   selectCandy: (pos: Position) => void;
   processSwap: (pos1: Position, pos2: Position) => void;
@@ -67,6 +73,10 @@ interface GameStore {
   closeResult: () => void;
   changeStation: (stationId: string) => void;
   persist: () => void;
+  selectSponsor: (sponsorId: SponsorId | null) => void;
+  acceptSponsorship: () => void;
+  declineSponsorship: () => void;
+  startSponsorshipPhase: () => void;
 }
 
 const useGameStore = create<GameStore>((set, get) => {
@@ -85,11 +95,14 @@ const useGameStore = create<GameStore>((set, get) => {
     currentOrder: persisted?.currentOrder,
     currentStationId: persisted?.currentStationId || initialProfile.unlockedStations[0] || 'candy-town',
     isAnimating: false,
-    gamePhase: persisted?.gamePhase === 'result' ? 'playing' : (persisted?.gamePhase || 'playing'),
+    gamePhase: persisted?.gamePhase === 'result' ? 'playing' : (persisted?.gamePhase || 'sponsorship'),
     dispatchResult: null,
     profile: initialProfile,
     stats: initialStats,
     showStats: false,
+    currentSponsorId: persisted?.currentSponsorId || null,
+    sponsorshipAccepted: persisted?.sponsorshipAccepted || false,
+    availableSponsors: ['strawberry-soda', 'lemon-theater', 'grape-royalty'],
 
     persist: () => {
       const s = get();
@@ -104,6 +117,8 @@ const useGameStore = create<GameStore>((set, get) => {
         maxCombo: s.maxCombo,
         gamePhase: s.gamePhase,
         dispatchResult: s.dispatchResult,
+        currentSponsorId: s.currentSponsorId,
+        sponsorshipAccepted: s.sponsorshipAccepted,
       });
     },
 
@@ -264,15 +279,34 @@ const useGameStore = create<GameStore>((set, get) => {
     },
 
     dispatchTrain: () => {
-      const { train, currentOrder, profile, gamePhase, moves, maxCombo } = get();
+      const { train, currentOrder, profile, gamePhase, moves, maxCombo, currentSponsorId, sponsorshipAccepted } = get();
 
       if (gamePhase !== 'playing' || !currentOrder) return;
 
       const result = calculateDispatchResult(train, currentOrder);
 
-      let newCoins = profile.coins + result.reward - result.penalty;
+      let sponsorshipResult: SponsorshipResult | undefined;
+      let totalReward = result.reward;
+      let totalPenalty = result.penalty;
+      let totalReputationChange = result.reputationChange;
+
+      if (sponsorshipAccepted && currentSponsorId) {
+        sponsorshipResult = evaluateSponsorship(currentSponsorId, train, result);
+
+        if (!sponsorshipResult.conditionsMet) {
+          totalPenalty += sponsorshipResult.refundAmount;
+          totalReputationChange -= sponsorshipResult.reputationLoss;
+        } else {
+          const sponsor = getSponsorById(currentSponsorId);
+          if (sponsor) {
+            totalReward += Math.floor(sponsor.advancePayment * 0.2);
+          }
+        }
+      }
+
+      let newCoins = profile.coins + totalReward - totalPenalty;
       newCoins = Math.max(0, newCoins);
-      let newReputation = profile.reputation + result.reputationChange;
+      let newReputation = profile.reputation + totalReputationChange;
       newReputation = Math.max(0, newReputation);
 
       const newUnlocked = checkUnlockedStations(newReputation);
@@ -292,16 +326,22 @@ const useGameStore = create<GameStore>((set, get) => {
         Math.max(1, movesUsed),
         Math.max(1, maxCombo),
         result.mismatches.length,
-        result.penalty,
+        totalPenalty,
         currentOrder.isUrgent,
         result.success,
         newReputation,
-        result.reputationChange
+        totalReputationChange
       );
 
       set({
         gamePhase: 'result',
-        dispatchResult: result,
+        dispatchResult: {
+          ...result,
+          reward: totalReward,
+          penalty: totalPenalty,
+          reputationChange: totalReputationChange,
+          sponsorshipResult,
+        },
         profile: newProfile,
         stats: loadStats(),
       });
@@ -316,16 +356,62 @@ const useGameStore = create<GameStore>((set, get) => {
       set(state => ({
         train: clearTrain(state.train),
         currentOrder: newOrder,
-        gamePhase: 'playing',
+        gamePhase: 'sponsorship',
         dispatchResult: null,
         board: createInitialBoard(),
         score: 0,
         moves: GAME_CONFIG.INITIAL_MOVES,
         combo: 0,
         maxCombo: 0,
+        currentSponsorId: null,
+        sponsorshipAccepted: false,
       }));
 
       get().persist();
+    },
+
+    selectSponsor: (sponsorId: SponsorId | null) => {
+      set({ currentSponsorId: sponsorId });
+    },
+
+    acceptSponsorship: () => {
+      const { currentSponsorId, profile } = get();
+      if (!currentSponsorId) return;
+
+      const sponsor = getSponsorById(currentSponsorId);
+      if (!sponsor) return;
+
+      const newProfile: PlayerProfile = {
+        ...profile,
+        coins: profile.coins + sponsor.advancePayment,
+      };
+      saveProfile(newProfile);
+
+      set({
+        sponsorshipAccepted: true,
+        gamePhase: 'playing',
+        profile: newProfile,
+      });
+
+      get().persist();
+    },
+
+    declineSponsorship: () => {
+      set({
+        currentSponsorId: null,
+        sponsorshipAccepted: false,
+        gamePhase: 'playing',
+      });
+
+      get().persist();
+    },
+
+    startSponsorshipPhase: () => {
+      set({
+        gamePhase: 'sponsorship',
+        currentSponsorId: null,
+        sponsorshipAccepted: false,
+      });
     },
 
     resetGame: () => {
@@ -344,10 +430,12 @@ const useGameStore = create<GameStore>((set, get) => {
         currentOrder: order,
         currentStationId: stationId,
         isAnimating: false,
-        gamePhase: 'playing',
+        gamePhase: 'sponsorship',
         dispatchResult: null,
         profile,
         stats: loadStats(),
+        currentSponsorId: null,
+        sponsorshipAccepted: false,
       });
 
       clearGameState();

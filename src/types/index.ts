@@ -90,8 +90,10 @@ export interface GameState {
   currentOrder: StationOrder | null;
   currentStationId: string;
   isAnimating: boolean;
-  gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover';
+  gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover' | 'sponsorship';
   dispatchResult: DispatchResult | null;
+  currentSponsorId: SponsorId | null;
+  sponsorshipAccepted: boolean;
 }
 
 export interface DispatchResult {
@@ -102,6 +104,45 @@ export interface DispatchResult {
   mismatches: OrderItem[];
   correctItems: OrderItem[];
   reputationChange: number;
+  sponsorshipResult?: SponsorshipResult;
+}
+
+export type SponsorId = 'strawberry-soda' | 'lemon-theater' | 'grape-royalty';
+
+export type SponsorshipConditionType =
+  | 'min-load-per-type'
+  | 'max-mismatch-types'
+  | 'min-match-rate'
+  | 'forbidden-candy'
+  | 'min-total-load';
+
+export interface SponsorshipCondition {
+  type: SponsorshipConditionType;
+  candyType?: CandyType;
+  value: number;
+  description: string;
+}
+
+export interface Sponsor {
+  id: SponsorId;
+  name: string;
+  description: string;
+  advancePayment: number;
+  reputationPenalty: number;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  logo: string;
+  conditions: SponsorshipCondition[];
+}
+
+export interface SponsorshipResult {
+  sponsorId: SponsorId;
+  conditionsMet: boolean;
+  violatedConditions: SponsorshipCondition[];
+  fulfilledConditions: SponsorshipCondition[];
+  refundAmount: number;
+  reputationLoss: number;
 }
 
 export interface StatsStep {

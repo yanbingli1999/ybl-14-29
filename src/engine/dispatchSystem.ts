@@ -1,4 +1,4 @@
-import { Train, StationOrder, DispatchResult, OrderItem, CandyType } from '@/types';
+import { Train, StationOrder, DispatchResult, OrderItem } from '@/types';
 import { GAME_CONFIG } from '@/data/config';
 import { getCandyLoad } from './loadingSystem';
 

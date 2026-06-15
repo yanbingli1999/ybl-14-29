@@ -1,8 +1,11 @@
 import useGameStore from '@/store/useGameStore';
-import { Zap, Star, Coins, Footprints, BarChart3, RotateCcw } from 'lucide-react';
+import { getSponsorById } from '@/engine/sponsorshipSystem';
+import { Zap, Star, Coins, Footprints, BarChart3, RotateCcw, Award } from 'lucide-react';
 
 export default function StatusBar() {
-  const { score, moves, combo, maxCombo, profile, setShowStats, resetGame } = useGameStore();
+  const { score, moves, combo, maxCombo, profile, setShowStats, resetGame, currentSponsorId, sponsorshipAccepted } = useGameStore();
+
+  const currentSponsor = sponsorshipAccepted && currentSponsorId ? getSponsorById(currentSponsorId) : null;
 
   return (
     <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 rounded-2xl p-4 shadow-xl">
@@ -38,6 +41,22 @@ export default function StatusBar() {
         </div>
 
         <div className="flex items-center gap-4">
+          {currentSponsor && (
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2"
+              style={{ background: currentSponsor.primaryColor + '40' }}
+            >
+              <Award className="w-5 h-5 text-white" />
+              <div>
+                <div className="text-xs text-white/70">赞助商</div>
+                <div className="text-lg font-bold text-white flex items-center gap-1">
+                  <span>{currentSponsor.logo}</span>
+                  <span className="text-sm">{currentSponsor.name}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 bg-white/20 rounded-xl px-3 py-2">
             <Coins className="w-5 h-5 text-yellow-300" />
             <div>
