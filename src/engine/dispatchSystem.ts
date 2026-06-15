@@ -8,6 +8,7 @@ export function calculateDispatchResult(
 ): DispatchResult {
   const correctItems: OrderItem[] = [];
   const mismatches: OrderItem[] = [];
+  const wrongLoadItems: OrderItem[] = [];
   let matchPoints = 0;
   let totalRequired = 0;
 
@@ -30,7 +31,9 @@ export function calculateDispatchResult(
   for (const carriage of train.carriages) {
     const inOrder = order.items.find(i => i.candyType === carriage.candyType);
     if (!inOrder && carriage.currentLoad > 0) {
-      mismatches.push({ candyType: carriage.candyType, quantity: carriage.currentLoad });
+      const wrongItem: OrderItem = { candyType: carriage.candyType, quantity: carriage.currentLoad };
+      mismatches.push(wrongItem);
+      wrongLoadItems.push(wrongItem);
     }
   }
 
@@ -61,6 +64,7 @@ export function calculateDispatchResult(
     reward,
     penalty,
     mismatches,
+    wrongLoadItems,
     correctItems,
     reputationChange,
   };

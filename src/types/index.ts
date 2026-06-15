@@ -102,6 +102,7 @@ export interface DispatchResult {
   reward: number;
   penalty: number;
   mismatches: OrderItem[];
+  wrongLoadItems: OrderItem[];
   correctItems: OrderItem[];
   reputationChange: number;
   sponsorshipResult?: SponsorshipResult;

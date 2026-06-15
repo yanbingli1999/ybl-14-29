@@ -8,10 +8,14 @@ export default function DispatchResultModal() {
 
   if (gamePhase !== 'result' || !dispatchResult || !currentOrder) return null;
 
-  const { success, matchRate, reward, penalty, mismatches, correctItems, reputationChange, sponsorshipResult } =
+  const { success, matchRate, reward, penalty, mismatches, wrongLoadItems, correctItems, reputationChange, sponsorshipResult } =
     dispatchResult;
 
   const sponsor = sponsorshipResult ? getSponsorById(sponsorshipResult.sponsorId) : null;
+
+  const shortageItems = mismatches.filter(
+    m => !wrongLoadItems.some(w => w.candyType === m.candyType)
+  );
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -90,20 +94,40 @@ export default function DispatchResultModal() {
             </div>
           )}
 
-          {mismatches.length > 0 && (
+          {shortageItems.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <XCircle className="w-4 h-4 text-orange-500" />
+                缺货
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {shortageItems.map((item, i) => (
+                  <span
+                    key={i}
+                    className="flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 rounded-lg text-sm"
+                  >
+                    {CANDY_CONFIG[item.candyType].emoji}
+                    差{item.quantity}个
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {wrongLoadItems.length > 0 && (
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
                 <XCircle className="w-4 h-4 text-red-500" />
-                错装或缺货
+                错装
               </h4>
               <div className="flex flex-wrap gap-2">
-                {mismatches.map((item, i) => (
+                {wrongLoadItems.map((item, i) => (
                   <span
                     key={i}
                     className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded-lg text-sm"
                   >
                     {CANDY_CONFIG[item.candyType].emoji}
-                    差{item.quantity}个
+                    多{item.quantity}个
                   </span>
                 ))}
               </div>
@@ -186,7 +210,7 @@ export default function DispatchResultModal() {
               onClick={closeResult}
               className="flex-1 py-3 px-4 rounded-xl font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
             >
-              继续装填
+              下一局
             </button>
             <button
               onClick={nextOrder}

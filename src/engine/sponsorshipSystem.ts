@@ -30,7 +30,7 @@ function checkMaxMismatchTypes(
   condition: SponsorshipCondition,
   dispatchResult: DispatchResult
 ): boolean {
-  return dispatchResult.mismatches.length <= condition.value;
+  return dispatchResult.wrongLoadItems.length <= condition.value;
 }
 
 function checkMinMatchRate(

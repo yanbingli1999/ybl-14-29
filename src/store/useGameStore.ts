@@ -415,7 +415,20 @@ const useGameStore = create<GameStore>((set, get) => {
     },
 
     resetGame: () => {
-      const profile = loadProfile();
+      const { currentSponsorId, sponsorshipAccepted } = get();
+      let profile = loadProfile();
+
+      if (sponsorshipAccepted && currentSponsorId) {
+        const sponsor = getSponsorById(currentSponsorId);
+        if (sponsor) {
+          profile = {
+            ...profile,
+            coins: Math.max(0, profile.coins - sponsor.advancePayment),
+          };
+          saveProfile(profile);
+        }
+      }
+
       const stationId = profile.unlockedStations[0] || 'candy-town';
       const order = generateOrder(stationId, profile.reputation);
 
@@ -451,7 +464,24 @@ const useGameStore = create<GameStore>((set, get) => {
     },
 
     closeResult: () => {
-      set({ gamePhase: 'playing', dispatchResult: null });
+      const { currentStationId, profile } = get();
+      const newOrder = generateOrder(currentStationId, profile.reputation);
+
+      set(state => ({
+        train: clearTrain(state.train),
+        currentOrder: newOrder,
+        gamePhase: 'sponsorship',
+        dispatchResult: null,
+        board: createInitialBoard(),
+        score: 0,
+        moves: GAME_CONFIG.INITIAL_MOVES,
+        combo: 0,
+        maxCombo: 0,
+        currentSponsorId: null,
+        sponsorshipAccepted: false,
+      }));
+
+      get().persist();
     },
 
     changeStation: (stationId: string) => {
